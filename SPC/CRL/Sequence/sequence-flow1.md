@@ -18,7 +18,8 @@ sequenceDiagram
     Utility->>Blob Storage: uploadFile(file)
     Blob Storage-->>Utility: response
     Utility-->> CRL: response
-    CRL->>CRL: insertHistoryLogToDb(fileId, fileInfo)
+    CRL->>CRL: status = "New"
+    CRL->>CRL: insertHistoryLogToDb(fileId, fileInfo, status)
     par Split background process
     CRL->>CRL: process(fileId)
     end

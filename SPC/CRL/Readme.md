@@ -1,8 +1,3 @@
-# Note
-
-- ไม่ใช้ hangfire เนื่องจาก UI hangfire ไม่มี filter สำหรับใช้ค้นหาเพื่อ manual trigger
-- implement api for re-trigger
-
 # Tasks
 - Create API for clear file in blob storage and history log
     * remove file from blob storage
@@ -10,7 +5,7 @@
 - Job for clear file in blob storage and history log
     * create job for trigger synchonus (Hangfire)
 - Implement API for upload file
-    * <mark>upload file to blob storage (service interact)</mark>
+    * <mark>upload file to blob storage (FileManagement)</mark>
     * insert HistoryLogDb
 - Implement function process file
     * fetch data from blob storage
@@ -21,8 +16,11 @@
         - etc.
     * business process (UNKNOW รอคุยคุยกับ team)
     * generate file failure report to CSV
-    * <mark>upload file to blob storage(service interact)</mark>
+    * <mark>upload file to blob storage(FileManagement)</mark>
     * update fileInfo to HistoryLogDb
-- Create service for interact with Blob Storage
+- Implement API for call function process file
+- Create service for interact with Blob Storage (FileManagement)
     * upload file to blob storage
     * fetch file from blob storage
+    * initial new project (prepare structure project)
+- Function for gzip file (wait to discuss for FE or BE implement)

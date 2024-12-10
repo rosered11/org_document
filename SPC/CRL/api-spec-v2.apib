@@ -1,0 +1,38 @@
+FORMAT: 1A
+HOST: https://alpha-api.app.net
+
+# Real World API
+This API Blueprint demonstrates a real world example documenting a portion of
+[App.net API](http://developers.app.net).
+
+NOTE: This document is a **work in progress**.
+
+# Group Product Master
+This section groups App.net post resources.
+
+## Import [/import]
+Import file
+
++ Attributes
+    + file: (object) - Upload file from data
+
+
+### Import product [POST]
+Returns a specific Post.
+
++ Response 204
+
+
+## Re-run process [/file/{fileId}]
+A Collection of posts.
+
++ Parameters
+    + fileId (string)
+    
+        The ID of file
+        
+### Re-run process file [POST]
+Re-run process file by `fileId`
+
++ Response 204
+

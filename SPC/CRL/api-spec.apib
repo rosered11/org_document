@@ -1,0 +1,36 @@
+FORMAT: 1A
+HOST: http://localhost:5002
+
+# Compress GZip API
+The API compresses an uploaded file using GZip and returns the compressed version.
+
+# Group Posts
+
+### Post [/import]
+Receive file `.gz` and type of file `.csv`
+
++ Request (multipart/form-data)
+    + Attributes (object)
+        + `file` (string) - File data .csv
+
++ Response 204
+
++ Response 400 (application/json)
+    + Attributes (object)
+        + `message` (string) - Description of the validate.
+
+    + Body
+        
+            {
+                "message": "Bad Request"
+            }
+        
++ Response 500 (application/json)
+    + Attributes (object)
+        + `message` (string) - Description of the error
+        
+    + Body
+        
+            {
+                "message": "Bad Request"
+            }
