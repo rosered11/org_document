@@ -22,5 +22,5 @@
 - Create service for interact with Blob Storage (FileManagement)
     * upload file to blob storage
     * fetch file from blob storage
-    * initial new project (prepare structure project)
+    * initial new project (prepare structure project + authen)
 - Function for gzip file (wait to discuss for FE or BE implement)

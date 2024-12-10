@@ -1,38 +1,86 @@
 FORMAT: 1A
-HOST: https://alpha-api.app.net
+HOST: http://localhost
 
-# Real World API
-This API Blueprint demonstrates a real world example documenting a portion of
-[App.net API](http://developers.app.net).
+# CRL API
+An API for import data from file
 
-NOTE: This document is a **work in progress**.
+# Introduction
 
-# Group Product Master
-This section groups App.net post resources.
+## About
 
-## Import [/import]
-Import file
+### File
 
-+ Attributes
-    + file: (object) - Upload file from data
+#### File Status
+| **Status** | **Description**
+|------------|-----------------
+| New | Order
+| RECEIVED | Order accepted
+
+# Reference
+
+## Group Data Api
+This section groups CRL service
+
+### Import [/domain-data/import]
+
+#### Import file data [POST]
+Use this endpoint to import file, by type of file is `.csv`
 
 
-### Import product [POST]
-Returns a specific Post.
++ Request (multipart/form-data; boundary=---BOUNDARY)
 
+    + Headers
+
+        Authorization: Bearer {access-token}
+    
+    + Body
+
+        -----BOUNDARY
+        Content-Disposition: form-data; name="file"; fileName="sourceData.csv"
+        -----BOUNDARY
 + Response 204
 
 
-## Re-run process [/file/{fileId}]
-A Collection of posts.
+#### Re-process [/domain-data/{fileId}]
 
 + Parameters
     + fileId (string)
     
         The ID of file
-        
-### Re-run process file [POST]
+
+#### Re-run process file [POST]
 Re-run process file by `fileId`
 
++ Headers
+
+    Authorization: B
+
 + Response 204
+
+## Group FileManagement Api
+This section group filemanagement service
+
+### Upload [/filemanagement/uploadStream/directory/{directory}/fileName/{fileName}]
+
+#### Upload file to blob [POST]
+Use this endpoint to upload file into blob storage.
+
++ Parameters
+    + directory (string)
+    
+        This field is directory name of blob.
+    
+    + fileName (string)
+
+        This field is filename.
+
++ Request (application/octet-stream)
+
+    + Headers
+
+        Authorization: Bearer {access-token}
+    
+    + Body
+
+        Binary Stream
 
