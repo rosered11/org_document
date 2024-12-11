@@ -19,14 +19,25 @@ This is api spec for the process file.
 
 ### Function Process File
 
-**Validation**
+**Validation Criteria**
 - [x] Check type of data, like:
     + [x] Check type and data is correct of datetime
     + [x] Check type digit for some field, if it is number.
     + [ ] [Optional] Check specific format of data, if it is specified, like: `email`
-- [x] Check max length of data string isn't over length in database
+- [x] Check max length of data string, it isn't over length of field in database
 - [x] Check duplicate data from system.
 
+**Process Instruction**
+- Find `HistoryLog` from `fileId`
+- Check `HistoryLog.status`, it must to have [New, Incompleted]
+- Get `file` from `HistoryLog.fileUrl`
+- Validate data from `file`
+- Save these data are correct from `file` into database
+- [Optional] if some data are incorrect
+    + Generate `report.csv` from the data are incorrect.
+    + Compression file `report.csv` to `gzip`
+    + Send report `gzip` upload to `FileManagement Service`
+- Update info to `HistoryLog`
 ## Group Domain Api
 This section groups CRL domain service
 
@@ -40,10 +51,18 @@ This section groups CRL domain service
 #### Import file data [POST]
 Use this endpoint to import file, by type of file is `.csv` only.
 
-**Task Validate**
-- [x] Check body from data must to have key ***file*** and not empty.
+**Validation Criteria**
+- [x] Check body `from data` must to have key ***file*** and not empty.
 - [x] Check extension file must to have `.csv` only.
 - [x] Check limit size of file isn't more than `10MB`
+
+**Process Instruction**
+- Validate `file` from request
+- Generate `fileId`
+- Set name `file` by `fileId`
+- Upload `file` to `Filemanagement Service`
+- Create `HistoryLog` param status = `"New"` fileId = `fileId`
+- Create Background Task for run function `ProcessFile` by pass parameter `fileId`
 
 + Request (multipart/form-data; boundary=---BOUNDARY)
 
@@ -75,6 +94,9 @@ Use this endpoint to import file, by type of file is `.csv` only.
 #### Re-run process file [POST]
 Re-run process file by `fileId`
 
+**Process Instruction**
+- Call function `ProcessFile` by pass parameter `fileId` from request
+
 + Request
 
     + Headers
@@ -94,21 +116,25 @@ This section group filemanagement service
 
 ### Upload Stream [/filemanagement/uploadStream/directory/{directory}/fileId/{fileId}]
 
-**Task validate**
-- [x] Check container available (Can be configuration)
-- [x] Check content type
-
 #### Upload stream to blob [POST]
 Use this endpoint to upload file into blob storage.
+
+**Validation Criteria**
+- [x] Check container available (Can be configuration)
+- [x] Check content type, it is `application/octet-stream` only
+
+**Process Instruction**
+- Validate `fileStream`
+- Upload `fileStream` to blob storage follow Uri parameters `directory` and `fileId`
 
 + Parameters
     + directory (string)
     
-        This field is directory name of blob.
+        This `directory` is a directory of blob.
     
     + fileId (string)
 
-        This field is fileId. ex: `fileId.csv.gz`
+        This `field` is a identity of file. ex: `fileId.csv.gz`
 
 + Request (application/octet-stream)
 
@@ -132,19 +158,26 @@ Use this endpoint to upload file into blob storage.
 + Response 500 (application/json)
     + Attributes (InternalError Base)
 
-### Download [/filemanagement/uploadStream/directory/{directory}/fileId/{fileId}]
+### Download [/filemanagement/uploadStream/directory/{directory}/fileId/{fileId}?fileName={fileName}]
 
 #### Download file from blob [GET]
 Use this endpoint for download file from blob storage.
 
+**Process Instruction**
+- Download `file` from blob storage follow Uri parameters `directory` and `fileId`
+
 + Parameters
     + directory (string)
     
-        This field is directory name of blob.
+        This `directory` is a directory of blob.
     
     + fileId (string)
 
-        This field is fileId. ex: `fileId.csv.gz`
+        This `field` is a identity of file. ex: `fileId.csv.gz`
+    
+    + fileName (optional, string)
+
+        This `fileName` is a name of file. ex: `fileName.csv.gz`
 
 + Response 200 (application/octet-stream)
 
