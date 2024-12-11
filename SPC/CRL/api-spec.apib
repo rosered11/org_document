@@ -1,36 +1,171 @@
 FORMAT: 1A
-HOST: http://localhost:5002
+HOST: http://localhost
 
-# Compress GZip API
-The API compresses an uploaded file using GZip and returns the compressed version.
+# CRL API
 
-# Group Posts
+# Introduction
+This is api spec for the process file.
 
-### Post [/import]
-Receive file `.gz` and type of file `.csv`
+## About
 
-+ Request (multipart/form-data)
-    + Attributes (object)
-        + `file` (string) - File data .csv
+### Status in ImportHistoryLog
+| **Status** | **Description**
+|------------|-----------------
+| New | Initial status of log.
+| In-progress | This task is processing for import data.
+| Completed | This task import data is completed.
+| Incompleted | This task import data has a problem.
+| Failed | Internal Exception for process import data.
 
+### Function Process File
+
+**Validation**
+- [x] Check type of data, like:
+    + [x] Check type and data is correct of datetime
+    + [x] Check type digit for some field, if it is number.
+    + [ ] [Optional] Check specific format of data, if it is specified, like: `email`
+- [x] Check max length of data string isn't over length in database
+- [x] Check duplicate data from system.
+
+# Reference
+
+## Group Domain Api
+This section groups CRL domain service
+
+### Note
+
+- the **domain** is the service name, like: `Product`, `Master`
+
+### Import [/domain/file/import]
+
+#### Import file data [POST]
+Use this endpoint to import file, by type of file is `.csv` only.
+
+**Task Validate**
+- [x] Check body from data must to have key ***file*** and not empty.
+- [x] Check extension file must to have `.csv` only.
+- [x] Check limit size of file isn't more than `10MB`
+
++ Request (multipart/form-data; boundary=---BOUNDARY)
+
+    + Headers
+
+        Authorization: Bearer {access-token}
+    
+    + Body
+
+        -----BOUNDARY
+        Content-Disposition: form-data; name="file"; fileName="sourceData.csv"
+        -----BOUNDARY
 + Response 204
 
 + Response 400 (application/json)
-    + Attributes (object)
-        + `message` (string) - Description of the validate.
+    + Attributes (BadRequest Base)
 
-    + Body
-        
-            {
-                "message": "Bad Request"
-            }
-        
 + Response 500 (application/json)
-    + Attributes (object)
-        + `message` (string) - Description of the error
-        
+    + Attributes (InternalError Base)
+
+
+#### Re-process [/domain/file/process/{fileId}]
+
++ Parameters
+    + fileId (string)
+    
+        This field is identity of file.
+
+#### Re-run process file [POST]
+Re-run process file by `fileId`
+
++ Request
+
+    + Headers
+
+        Authorization: Bearer {access-token}
+
++ Response 204
+
++ Response 404 (application/json)
+    + Attributes (NotFound Base)
+
++ Response 500 (application/json)
+    + Attributes (InternalError Base)
+
+## Group FileManagement Api
+This section group filemanagement service
+
+### Upload Stream [/filemanagement/uploadStream/directory/{directory}/fileId/{fileId}]
+
+**Task validate**
+- [x] Check container available (Can be configuration)
+- [x] Check content type
+
+#### Upload file to blob [POST]
+Use this endpoint to upload file into blob storage.
+
++ Parameters
+    + directory (string)
+    
+        This field is directory name of blob.
+    
+    + fileId (string)
+
+        This field is fileId. ex: `fileId.csv.gz`
+
++ Request (application/octet-stream)
+
+    + Headers
+
+        Authorization: Bearer {access-token}
+    
     + Body
-        
-            {
-                "message": "Bad Request"
-            }
+
+        Binary Stream
+
++ Response 201 (application/json)
+    + Attributes
+        + fileUrl: http://localhost/file (string)
+
+            A url for download this file.
+
++ Response 400 (application/json)
+    + Attributes (BadRequest Base)
+
++ Response 500 (application/json)
+    + Attributes (InternalError Base)
+
+### Download [/filemanagement/uploadStream/directory/{directory}/fileId/{fileId}]
+
+#### Download file from blob [GET]
+Use this endpoint for download file from blob storage.
+
++ Parameters
+    + directory (string)
+    
+        This field is directory name of blob.
+    
+    + fileId (string)
+
+        This field is fileId. ex: `fileId.csv.gz`
+
++ Response 404 (application/json)
+    + Attributes (NotFound Base)
+
++ Response 500 (application/json)
+    + Attributes (InternalError Base)
+
+# Data Structures
+
+## BadRequest Base (object)
++ message: Invalid content type (string)
+
+    A message validate.
+
+## NotFound Base (object)
++ message: File not found (string)
+
+    A data is missing in system.
+
+## InternalError Base (object)
++ message: Null Referenece Exception (string)
+
+    A exception message.
