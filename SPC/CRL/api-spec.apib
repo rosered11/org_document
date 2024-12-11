@@ -1,12 +1,12 @@
 FORMAT: 1A
-HOST: http://localhost
+HOST: http://crlservice
 
 # CRL API
 
 # Introduction
 This is api spec for the process file.
 
-## About
+## Group About
 
 ### Status in ImportHistoryLog
 | **Status** | **Description**
@@ -27,16 +27,15 @@ This is api spec for the process file.
 - [x] Check max length of data string isn't over length in database
 - [x] Check duplicate data from system.
 
-# Reference
-
 ## Group Domain Api
 This section groups CRL domain service
 
 ### Note
 
-- the **domain** is the service name, like: `Product`, `Master`
+- the **domain** is the domain name, like: `Product`, `Master`
+- the **subDomain** is the subDomain name, like: `ProductCMG`, `ProductCDS`
 
-### Import [/domain/file/import]
+### Import [/domain/fileSubDomain/import]
 
 #### Import file data [POST]
 Use this endpoint to import file, by type of file is `.csv` only.
@@ -66,7 +65,7 @@ Use this endpoint to import file, by type of file is `.csv` only.
     + Attributes (InternalError Base)
 
 
-#### Re-process [/domain/file/process/{fileId}]
+### Re-process [/domain/fileSubDomain/process/{fileId}]
 
 + Parameters
     + fileId (string)
@@ -99,7 +98,7 @@ This section group filemanagement service
 - [x] Check container available (Can be configuration)
 - [x] Check content type
 
-#### Upload file to blob [POST]
+#### Upload stream to blob [POST]
 Use this endpoint to upload file into blob storage.
 
 + Parameters
@@ -146,6 +145,16 @@ Use this endpoint for download file from blob storage.
     + fileId (string)
 
         This field is fileId. ex: `fileId.csv.gz`
+
++ Response 200 (application/octet-stream)
+
+    + Headers
+
+        Content-Disposition: attachment; filename="file.csv.gz"
+
+    + Body
+
+        Binary Stream
 
 + Response 404 (application/json)
     + Attributes (NotFound Base)
