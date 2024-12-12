@@ -25,56 +25,51 @@ This is api spec for the process file.
     + [x] Check type digit for some field, if it is number.
     + [ ] [Optional] Check specific format of data, if it is specified, like: `email`
 - [x] Check max length of data string, it isn't over length of field in database
-- [x] Check duplicate data from system.
+- [x] Check duplicate data in the file and database (**remark:** Try to minimum interact with a database).
 
 **Process Instruction**
 - Find `HistoryLog` from `fileId`
 - Check `HistoryLog.status`, it must to have [New, Incompleted]
 - Get `file` from `HistoryLog.fileUrl`
-- Validate data from `file`
-- Save these data are correct from `file` into database
-- [Optional] if some data are incorrect
-    + Generate `report.csv` from the data are incorrect.
-    + Compression file `report.csv` to `gzip`
-    + Send report `gzip` upload to `FileManagement Service`
+- Validate all data from `file`.
+- If it hasn't data invalid, Save all data from `file` into `database`
+- Generate `report.csv` from the **all data + remark**.
+- Compression file `report.csv` to `gzip`
+- Send report `gzip` upload to `FileManagement Service`
 - Update info to `HistoryLog`
-## Group Domain Api
-This section groups CRL domain service
 
-### Note
+## Group Product Api
+This section groups CRL Product service
 
-- the **domain** is the domain name, like: `Product`, `Master`
-- the **subDomain** is the subDomain name, like: `ProductCMG`, `ProductCDS`
+### Import file product master [/product/master/import]
 
-### Import [/domain/fileSubDomain/import]
-
-#### Import file data [POST]
+#### Import master [POST]
 Use this endpoint to import file, by type of file is `.csv` only.
 
 **Validation Criteria**
-- [x] Check body `from data` must to have key ***file*** and not empty.
-- [x] Check extension file must to have `.csv` only.
+- [x] Check binary data isn't empty.
+- [x] Check extension form Headers `X-Custom-Extension`, it must to have `csv` only.
 - [x] Check limit size of file isn't more than `10MB`
 
 **Process Instruction**
-- Validate `file` from request
+- Validate `binary data` from request
 - Generate `fileId`
-- Set name `file` by `fileId`
-- Upload `file` to `Filemanagement Service`
-- Create `HistoryLog` param status = `"New"` fileId = `fileId`
+- Upload `binary data` and `fileId` to a [Api Upload](#filemanagement-api-upload)
+- Insert log to table `ImportMasterLog` param Status = `"New"`, FileId = `fileId`, SourceFileUrl = `upload result`
 - Create Background Task for run function `ProcessFile` by pass parameter `fileId`
 
-+ Request (multipart/form-data; boundary=---BOUNDARY)
++ Request (application/octet-stream)
 
     + Headers
 
         Authorization: Bearer {access-token}
+        X-Custom-Extension: csv
+        X-Custom-FileName: fileName.csv.gz
     
     + Body
 
-        -----BOUNDARY
-        Content-Disposition: form-data; name="file"; fileName="sourceData.csv"
-        -----BOUNDARY
+        Binary Data
+
 + Response 204
 
 + Response 400 (application/json)
@@ -84,14 +79,14 @@ Use this endpoint to import file, by type of file is `.csv` only.
     + Attributes (InternalError Base)
 
 
-### Re-process [/domain/fileSubDomain/process/{fileId}]
+### Re process file product master [/product/master/processFile/{fileId}]
 
 + Parameters
     + fileId (string)
     
         This field is identity of file.
 
-#### Re-run process file [POST]
+#### Re-process file master [POST]
 Re-run process file by `fileId`
 
 **Process Instruction**
@@ -114,10 +109,14 @@ Re-run process file by `fileId`
 ## Group FileManagement Api
 This section group filemanagement service
 
-### Upload Stream [/filemanagement/uploadStream/directory/{directory}/fileId/{fileId}]
+### Upload [/filemanagement/blobStorage/{id}/containers/{container}/types/{type}]
 
-#### Upload stream to blob [POST]
+#### Upload file to blob [POST]
 Use this endpoint to upload file into blob storage.
+
+**Type Available**
+- *product-master*
+- *product-master-report*
 
 **Validation Criteria**
 - [x] Check container available (Can be configuration)
@@ -128,19 +127,25 @@ Use this endpoint to upload file into blob storage.
 - Upload `fileStream` to blob storage follow Uri parameters `directory` and `fileId`
 
 + Parameters
-    + directory (string)
+    + container (string)
     
-        This `directory` is a directory of blob.
+        This `container` is a container of blob.
     
-    + fileId (string)
+    + id (string)
 
-        This `field` is a identity of file. ex: `fileId.csv.gz`
+        This `id` is a identity of file. ex: `w143kxnu.idj`
+    
+    + type (string)
+
+        This `type` is a type of template. ex: `product-master`
 
 + Request (application/octet-stream)
 
     + Headers
 
         Authorization: Bearer {access-token}
+        X-Custom-Extension: csv
+        X-Custom-FileName: fileName.csv.gz
     
     + Body
 
@@ -148,7 +153,7 @@ Use this endpoint to upload file into blob storage.
 
 + Response 201 (application/json)
     + Attributes
-        + fileUrl: http://localhost/file (string)
+        + fileUrl: http://localhost/blobStorage/fileid.dd4/containers/spc-product?fileName=mymy.xlsx (string)
 
             A url for download this file.
 
@@ -158,22 +163,40 @@ Use this endpoint to upload file into blob storage.
 + Response 500 (application/json)
     + Attributes (InternalError Base)
 
-### Download [/filemanagement/uploadStream/directory/{directory}/fileId/{fileId}?fileName={fileName}]
+### Download [/filemanagement/blobStorage/{id}/containers/{container}/types/{type}?fileName={fileName}]
 
 #### Download file from blob [GET]
 Use this endpoint for download file from blob storage.
+
+**Containers**
+
+Recommend: Should read container from config. 
+
+**DEV:** cgfmsdev
+
+**UAT:** -
+
+**PRD:** -
+
+**Type Available**
+- *product-master*
+- *product-master-report*
 
 **Process Instruction**
 - Download `file` from blob storage follow Uri parameters `directory` and `fileId`
 
 + Parameters
-    + directory (string)
+    + container (string)
     
-        This `directory` is a directory of blob.
+        This `container` is a container of blob.
     
-    + fileId (string)
+    + id (string)
 
-        This `field` is a identity of file. ex: `fileId.csv.gz`
+        This `id` is a identity of file. ex: `w143kxnu.idj`
+    
+    + type (string)
+
+        This `type` is a type of template. ex: `product-master`
     
     + fileName (optional, string)
 

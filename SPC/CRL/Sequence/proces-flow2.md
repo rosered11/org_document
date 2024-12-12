@@ -1,56 +1,47 @@
 ```mermaid
 sequenceDiagram
-    participant CRL
-    participant Utility
+    participant Product
+    participant FileManagement
     participant Blob Storage
-    CRL->>CRL: status = getStatusFromHistoryDb(fileId)
+    Product->>Product: status = getStatusFromHistoryDb(fileId)
     opt status match in (New, Incompleted)
-        CRL->>CRL: db.HistoryDb.updateStatus(Inprogress)
-        CRL->>CRL: fileUrl getUrlFileHistoryLog(fileId)
-        CRL->>Utility: file = getFile(fileUrl)
-        Utility->>Utility: fileId = getInfoFrom(fileUrl)
-        Utility->>Blob Storage: file = getFile(fileId)
-        Blob Storage-->>Utility: return file
-        Utility-->>CRL: return file
-        CRL->>CRL: dataRecords = fetchDataFromFile(file)
-        Note left of CRL: In case exception must to "Rollback"<br/> and update status "Failed" in HistoryDb
-        CRL->>CRL: db.openTransaction()
-        Note left of CRL: Need batch process
-        CRL->>CRL: indexBatch = 0
+        Product->>Product: db.HistoryDb.updateStatus(Inprogress)
+        Product->>Product: fileUrl getUrlFileHistoryLog(fileId)
+        Product->>FileManagement: file = getFile(fileUrl)
+        FileManagement->>Blob Storage: file = getFile(blobId, container)
+        Blob Storage-->>FileManagement: return file
+        FileManagement-->>Product: return file
+        Product->>Product: dataRecords = fetchDataFromFile(file)
+        Note left of Product: In case exception must to "Rollback"<br/> and update status "Failed" in HistoryDb<br/> and update "Exception" message in field "Remark" in HistoryDb
+        Product->>Product: db.openTransaction()
+        Note left of Product: Need batch process
+        Product->>Product: indexBatch = 0
         loop data in dataRecords
-            Note right of CRL: Must to have validate require field, max length and data duplicate in system.
-            CRL->>CRL: validateResult = validateData(data)
-            alt validateResult is failed
-                CRL->>CRL: failureResults.add(validateResult)
-            else
-                Note right of CRL: Unknow business logic
-                CRL->>CRL: dataTracking = businessProcess(data)
-                CRL->>CRL: dataTrackings.add(dataTracking)
-            end
-            CRL->>CRL: indexBatch++
-            opt indexBatch >= maxSizeBatch
-                CRL->>CRL: db.Transaction.add(dataTrackings)
-                CRL->>CRL: indexBatch = 0
-            end
+            Note right of Product: Must to have validate require field, max length and data duplicate in file and database.
+            Product->>Product: validateResult = validateData(data)
+            Product->>Product: reportData.add(data, validateResult)
+            Note right of Product: Unknow business logic
+            Product->>Product: dataTracking = businessProcess(data)
+            Product->>Product: dataTrackings.add(dataTracking)
+            Product->>Product: indexBatch++
+            Note right of Product: Need add dataTrackings per batch
+            Product->>Product: db.Transaction.add(dataTrackings)
         end
-        opt indexBatch > 0
-            CRL->>CRL: db.Transaction.add(dataTrackings)
-            CRL->>CRL: indexBatch = 0
-        end
-        alt failureResults has data
-            CRL->CRL: failureReportId = generateId()
-            CRL->>CRL: failureReport = generateCSVReport(failureResults, failureReportId)
-            CRL->>Utility: failureReportUrl = uploadFile(failureReport)
-            Utility->>Blob Storage: uploadFile(failureReport)
-            Blob Storage-->>Utility: response
-            Utility-->>CRL: response
-            CRL->>CRL: status = Incompleted
-            CRL->>CRL: db.HistoryDb.update(fileId, failureResults, failureReportUrl, status)
+        Product->Product: reportId = generateId()
+        Product->>Product: report = generateCSVReport(reportData, reportId)
+        Product->>Product: report.gz = compressionGzip(report)
+        Product->>FileManagement: reportUrl = uploadFile(report.gz)
+        FileManagement->>Blob Storage: uploadFile(report.gz)
+        Blob Storage-->>FileManagement: response
+        FileManagement-->>Product: response
+        alt some record in reportData is invalid
+            Product->>Product: status = Incompleted
+            Product->>Product: db.rollback()
         else
-            CRL->>CRL: status = Completed
-            CRL->>CRL: db.HistoryDb.update(fileId, failureResults, status)
+            Product->>Product: status = Completed
         end
-        CRL->>CRL: db.commit()
+        Product->>Product: db.HistoryDb.update(fileId, reportData, reportUrl, status)
+        Product->>Product: db.commit()
     end
-    CRL->>CRL: return task completed
+    Product->>Product: return task completed
 ```
