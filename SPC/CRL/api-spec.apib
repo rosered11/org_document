@@ -8,16 +8,19 @@ This is api spec for the process file.
 
 ## Group About
 
-### Status in ImportHistoryLog
+### Status in MasterImportLog
 | **Status** | **Description**
 |------------|-----------------
 | New | Initial status of log.
 | In-progress | This task is processing for import data.
 | Completed | This task import data is completed.
-| Incompleted | This task import data has a problem.
+| In-completed | This task import data has a problem.
 | Failed | Internal Exception for process import data.
 
 ### Function Process File
+
+**Parameters**
+- `fileId`
 
 **Validation Criteria**
 - [x] Check type of data, like:
@@ -25,18 +28,18 @@ This is api spec for the process file.
     + [x] Check type digit for some field, if it is number.
     + [ ] [Optional] Check specific format of data, if it is specified, like: `email`
 - [x] Check max length of data string, it isn't over length of field in database
-- [x] Check duplicate data in the file and database (**remark:** Try to minimum interact with a database).
+- [x] Check duplicate data in the file and database</br>(**remark:** Try to minimum interact with a database).
 
 **Process Instruction**
-- Find `HistoryLog` from `fileId`
-- Check `HistoryLog.status`, it must to have [New, Incompleted]
-- Get `file` from `HistoryLog.fileUrl`
+- Find `MasterImportLog` by `fileId`
+- Check `status` in `MasterImportLog`, it must be [New, In-completed]
+- Get `file` from `sourceFileUrl` in `MasterImportLog`
 - Validate all data from `file`.
 - If it hasn't data invalid, Save all data from `file` into `database`
 - Generate `report.csv` from the **all data + remark**.
 - Compression file `report.csv` to `gzip`
 - Send report `gzip` upload to `FileManagement Service`
-- Update info to `HistoryLog`
+- Update info to `MasterImportLog`
 
 ## Group Product Api
 This section groups CRL Product service
@@ -55,7 +58,7 @@ Use this endpoint to import file, by type of file is `.csv` only.
 - Validate `binary data` from request
 - Generate `fileId`
 - Upload `binary data` and `fileId` to a [Api Upload](#filemanagement-api-upload)
-- Insert log to table `ImportMasterLog` param Status = `"New"`, FileId = `fileId`, SourceFileUrl = `upload result`
+- Insert log to table `MasterImportLog` param Status = `"New"`, FileId = `fileId`, SourceFileUrl = `upload result`
 - Create Background Task for run function `ProcessFile` by pass parameter `fileId`
 
 + Request (application/octet-stream)

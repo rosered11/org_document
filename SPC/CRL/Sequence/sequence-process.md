@@ -15,7 +15,6 @@ sequenceDiagram
         Note left of Product: In case exception must to "Rollback"<br/> and update status "Failed" in HistoryDb<br/> and update "Exception" message in field "Remark" in HistoryDb
         Product->>Product: db.openTransaction()
         Note left of Product: Need batch process
-        Product->>Product: indexBatch = 0
         loop data in dataRecords
             Note right of Product: Must to have validate require field, max length and data duplicate in file and database.
             Product->>Product: validateResult = validateData(data)
@@ -23,7 +22,6 @@ sequenceDiagram
             Note right of Product: Unknow business logic
             Product->>Product: dataTracking = businessProcess(data)
             Product->>Product: dataTrackings.add(dataTracking)
-            Product->>Product: indexBatch++
             Note right of Product: Need add dataTrackings per batch
             Product->>Product: db.Transaction.add(dataTrackings)
         end
