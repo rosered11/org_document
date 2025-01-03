@@ -3,21 +3,7 @@ HOST: http://crlservice
 
 # CRL API
 
-# Introduction
-This is api spec for the process file.
-
-## Group About
-
-### Status in MasterImportLog
-| **Status** | **Description**
-|------------|-----------------
-| New | Initial status of log.
-| In-progress | This task is processing for import data.
-| Completed | This task import data is completed.
-| In-completed | This task import data has a problem.
-| Failed | Internal Exception for process import data.
-
-### Function Process File
+### Function Process Product Master
 
 **Parameters**
 - `fileId`
@@ -31,35 +17,161 @@ This is api spec for the process file.
 - [x] Check duplicate data in the file and database</br>(**remark:** Try to minimum interact with a database).
 
 **Process Instruction**
-- Find `MasterImportLog` by `fileId`
-- Check `status` in `MasterImportLog`, it must be [New, In-completed]
-- Get `file` from `sourceFileUrl` in `MasterImportLog`
+- Download file from Filemanagement by `fileId`
 - Validate all data from `file`.
-- If it hasn't data invalid, Save all data from `file` into `database`
-- Generate `report.csv` from the **all data + remark**.
+- Save data isn't invalid from `file` into `database`
+- If has data invalid, Generate `report.csv` from the **all data + remark**.
 - Compression file `report.csv` to `gzip`
 - Send report `gzip` upload to `FileManagement Service`
-- Update info to `MasterImportLog`
+- Update info and status of process file to `FileManagement Service`
+
+### Status in ImportFileLog
+| **Status** | **Description**
+|------------|-----------------
+| New | Initial status of log.
+| In-progress | This task is processing for import data.
+| Completed | This task import data is completed.
+| In-completed | This task import data has a problem.
+| Failed | Internal Exception for process import data.
+| Unknown.. | Unknown status for sync to FC
+
+### Type in BlobStorage
+| **Type** | **Path** | **Description**
+|----------|----------|----------------
+| product-master | sprint-connect/product-master | This is path of the source file of product master.
+| product-master-report | sprint-connect/product-master/report | This is path of the report file of product master.
 
 ## Group Product Api
-This section groups CRL Product service
 
-### Import file product master [/product/master/import]
+### Trigger process product master [/product/master/fileprocess]
 
-#### Import master [POST]
-Use this endpoint to import file, by type of file is `.csv` only.
+#### Trigger product master [PUT]
 
 **Validation Criteria**
-- [x] Check binary data isn't empty.
-- [x] Check extension form Headers `X-Custom-Extension`, it must to have `csv` only.
-- [x] Check limit size of file isn't more than `10MB`
+- [x] Check `fileId` isn't empty.
 
 **Process Instruction**
-- Validate `binary data` from request
-- Generate `fileId`
-- Upload `binary data` and `fileId` to a [Api Upload](#filemanagement-api-upload)
-- Insert log to table `MasterImportLog` param Status = `"New"`, FileId = `fileId`, SourceFileUrl = `upload result`
-- Create Background Task for run function `ProcessFile` by pass parameter `fileId`
+- Create background thread for execute [Function Process File](#header-function-process-product-master)
+
++ Request (application/json)
+
+    + Headers
+
+        Authorization: Bearer {access-token}
+    
+    + Body
+
+        {
+            "fileId": "w143kxnu.idj"
+        }
+
++ Response 201
+
++ Response 500 (application/json)
+    + Attributes (InternalError Base)
+
+## Group FileManagement Api
+This section group filemanagement service
+
+### Download [/filemanagement/blobStorage/{fileId}?fileName={fileName}]
+
+#### Download file from blob [GET]
+Use this endpoint for download file from blob storage.
+
+**Containers**
+
+Read container from config. 
+
+**Type Available:** [click](#header-type-in-blobstorage)
+
+**Process Instruction**
+- Download `file` from blob storage follow Uri parameters `directory` and `fileId`
+
++ Parameters    
+    + fileId (string)
+
+        This `id` is a identity of file. ex: `w143kxnu.idj`
+    
+    + fileName (optional, string)
+
+        This `fileName` is a name of file. ex: `fileName.csv.gz`
+
++ Response 200 (application/octet-stream)
+
+    + Headers
+
+        Content-Disposition: attachment; filename="file.csv.gz"
+
+    + Body
+
+        Binary Stream
+
++ Response 404 (application/json)
+    + Attributes (NotFound Base)
+
++ Response 500 (application/json)
+    + Attributes (InternalError Base)
+
+### Download [/filemanagement/api/blobStorage/{fileId}/decompress?fileName={fileName}]
+
+#### Download file by fileId with decompress [GET]
+
+**Process Instruction**
+- Download `file` from blob storage follow Uri parameters `directory` and `fileId`
+
++ Parameters    
+    + fileId (string)
+
+        This `fileId` is a identity of file. ex: `w143kxnu.idj`
+    
+    + fileName (optional, string)
+
+        This `fileName` is a name of file. ex: `fileName.csv.gz`
+
++ Response 200 (application/octet-stream)
+
+    + Headers
+
+        Content-Disposition: attachment; filename="file.csv.gz"
+
+    + Body
+
+        Binary Stream
+
++ Response 404 (application/json)
+    + Attributes (NotFound Base)
+
++ Response 500 (application/json)
+    + Attributes (InternalError Base)
+
+### Import file for processing [/filemanagement/api/blobStorage/bu/{bu}/type/{type}]
+
+#### Import file for process [POST]
+Use this endpoint to upload file into blob storage.
+
+**Type Available:** [click](#header-type-in-blobstorage)
+
+**Validation Criteria**
+- [x] Check type available (Can be configuration)
+- [x] Check content type, it is `application/octet-stream` only
+
+**Process Instruction**
+- Validate `fileStream`
+- Generate `fileId` and set fileName
+- Find path `directory` for upload blob
+- Upload `fileStream` to blob storage follow `directory` and `fileId`
+- Insert ImportHistoryLog
+- Find trigger url by `type`
+- Call api trigger url
+
++ Parameters
+    + bu (string)
+    
+        The `bu` receive from request.
+    
+    + type (string)
+
+        This `type` is a type of template. ex: `product-master`
 
 + Request (application/octet-stream)
 
@@ -71,7 +183,7 @@ Use this endpoint to import file, by type of file is `.csv` only.
     
     + Body
 
-        Binary Data
+        Binary Stream
 
 + Response 204
 
@@ -81,63 +193,25 @@ Use this endpoint to import file, by type of file is `.csv` only.
 + Response 500 (application/json)
     + Attributes (InternalError Base)
 
+### Upload file [/filemanagement/api/blobStorage/type/{type}]
 
-### Re process file product master [/product/master/processFile/{fileId}]
-
-+ Parameters
-    + fileId (string)
-    
-        This field is identity of file.
-
-#### Re-process file master [POST]
-Re-run process file by `fileId`
-
-**Process Instruction**
-- Call function `ProcessFile` by pass parameter `fileId` from request
-
-+ Request
-
-    + Headers
-
-        Authorization: Bearer {access-token}
-
-+ Response 204
-
-+ Response 404 (application/json)
-    + Attributes (NotFound Base)
-
-+ Response 500 (application/json)
-    + Attributes (InternalError Base)
-
-## Group FileManagement Api
-This section group filemanagement service
-
-### Upload [/filemanagement/blobStorage/{id}/containers/{container}/types/{type}]
-
-#### Upload file to blob [POST]
+#### Upload file [POST]
 Use this endpoint to upload file into blob storage.
 
-**Type Available**
-- *product-master*
-- *product-master-report*
+**Type Available:** [click](#header-type-in-blobstorage)
 
 **Validation Criteria**
-- [x] Check container available (Can be configuration)
+- [x] Check type available (Can be configuration)
 - [x] Check content type, it is `application/octet-stream` only
 
 **Process Instruction**
 - Validate `fileStream`
-- Upload `fileStream` to blob storage follow Uri parameters `directory` and `fileId`
+- Generate `fileId` and set fileName
+- Find path `directory` for upload blob
+- Upload `fileStream` to blob storage follow `directory` and `fileId`
+- Return download url for upload file 
 
 + Parameters
-    + container (string)
-    
-        This `container` is a container of blob.
-    
-    + id (string)
-
-        This `id` is a identity of file. ex: `w143kxnu.idj`
-    
     + type (string)
 
         This `type` is a type of template. ex: `product-master`
@@ -156,7 +230,7 @@ Use this endpoint to upload file into blob storage.
 
 + Response 201 (application/json)
     + Attributes
-        + fileUrl: http://localhost/blobStorage/fileid.dd4/containers/spc-product?fileName=mymy.xlsx (string)
+        + fileUrl: http://localhost/api/blobStorage/fileid.dd4/decompress (string)
 
             A url for download this file.
 
@@ -166,57 +240,37 @@ Use this endpoint to upload file into blob storage.
 + Response 500 (application/json)
     + Attributes (InternalError Base)
 
-### Download [/filemanagement/blobStorage/{id}/containers/{container}/types/{type}?fileName={fileName}]
+### Update info of import file [/filemanagement/api/importFileLog/updateImportFileLog]
 
-#### Download file from blob [GET]
-Use this endpoint for download file from blob storage.
+#### Update info of file [PATCH]
 
-**Containers**
-
-Recommend: Should read container from config. 
-
-**DEV:** cgfmsdev
-
-**UAT:** -
-
-**PRD:** -
-
-**Type Available**
-- *product-master*
-- *product-master-report*
+**Validation Criteria**
+- depend on code
 
 **Process Instruction**
-- Download `file` from blob storage follow Uri parameters `directory` and `fileId`
+- Update data info of process file by fileId
 
-+ Parameters
-    + container (string)
-    
-        This `container` is a container of blob.
-    
-    + id (string)
-
-        This `id` is a identity of file. ex: `w143kxnu.idj`
-    
-    + type (string)
-
-        This `type` is a type of template. ex: `product-master`
-    
-    + fileName (optional, string)
-
-        This `fileName` is a name of file. ex: `fileName.csv.gz`
-
-+ Response 200 (application/octet-stream)
++ Request (application/json)
 
     + Headers
 
-        Content-Disposition: attachment; filename="file.csv.gz"
-
+        Authorization: Bearer {access-token}
+    
     + Body
 
-        Binary Stream
+        {
+            "fileId": "",
+            "status": "",
+            "remark": "",
+            "sourceBatch": "",
+            "allRecordCount": "",
+            "failureRecordCount": "",
+            "reportFileUrl": ""
+        }
 
-+ Response 404 (application/json)
-    + Attributes (NotFound Base)
++ Response 200 (application/json)
+    
+    depend on code
 
 + Response 500 (application/json)
     + Attributes (InternalError Base)

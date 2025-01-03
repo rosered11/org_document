@@ -9,12 +9,12 @@
     * insert HistoryLogDb
 - Implement function process file
     * fetch data from blob storage
-    * validate data (require unit test)
+    * validate data (require unit test) 
         - check require field
         - check max length
-        - check duplicate in system
-        - etc.
-    * business process (UNKNOW รอคุยคุยกับ team)
+        - check duplicate data in file and system
+        - check format text need (data maybe change by a application Excel)
+    * call function business process (UNKNOW รอคุยคุยกับ team)
     * generate file failure report to CSV
     * <mark>upload file to blob storage(FileManagement)</mark>
     * update fileInfo to HistoryLogDb
@@ -24,3 +24,6 @@
     * fetch file from blob storage
     * initial new project (prepare structure project + authen)
 - Function for gzip file (wait to discuss for FE or BE implement)
+- Implement API for get history log list
+- Implement function bussiness process
+    * etc..

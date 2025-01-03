@@ -2,28 +2,28 @@
 sequenceDiagram
     participant Client
     participant Front CRL
-    participant Product
     participant FileMangement
     participant Blob Storage
+    participant TargetService
     Client->>Front CRL: upload file (gzip)
     Front CRL->>Front CRL: invailidRow = validateLimitRow(file)
     alt invailidRow is failed
     Front CRL-->>Client: return message data over limit
     else
     Note right of Front CRL: File is gzip only
-    Front CRL->> Product: upload file (gzip)
-    Product->>Product: fileId = generateFileId()
-    Product->>Product: file.setName(fileId)
-    Product->>FileMangement: uploadFile(file)
-    FileMangement->>Blob Storage: uploadFile(file)
+    Front CRL->> FileMangement: upload file(gzip) + event
+    FileMangement->>FileMangement: fileId = generateFileId()
+    FileMangement->>FileMangement: file.setName(fileId)
+    FileMangement->>FileMangement: pathBlob = FindPathBlobBy(req.type)
+    FileMangement->>Blob Storage: uploadFile(file, pathBlob)
     Blob Storage-->>FileMangement: response
-    FileMangement-->> Product: response
-    Product->>Product: status = "New"
-    Product->>Product: insertHistoryLogToDb(fileId, fileInfo, status)
-    par Split background process
-    Product->>Product: process(fileId)
-    end
-    Product-->>Front CRL: response
+    FileMangement->>FileMangement: status = "New"
+    FileMangement->>FileMangement: insertHistoryLogToDb(fileId, fileInfo, status)
+    FileMangement->>FileMangement: triggerUrl = FindUrlBy(req.type)
+    FileMangement->>TargetService: call API(triggerUrl, fileId)
+    TargetService-->>FileMangement: response
+    FileMangement->>FileMangement: db.updateHistoryStatus("Inprogress")
+    FileMangement-->>Front CRL: response
     Front CRL-->>Client: response
     end
 ```
