@@ -1,6 +1,6 @@
 ```mermaid
 erDiagram
-    MasterImportLog {
+    ImportFileLogTb {
         long Id PK
         DateTime CreatedDate
         string(50) CreatedBy
@@ -18,5 +18,12 @@ erDiagram
         string(100) SourceBatch "The source batch ได้รับจาก Product service"
         string(100) Bu "ได้รับจาก request"
         string(50) FileExtension "ได้รับจาก request"
+    }
+    BlobFileStoreLogs {
+        long Id PK
+        DateTime Timestamp "เวลาที่ไฟล์ upload เข้า blob"
+        string(100) FileId "Identity ของ file ที่ใช้อ้างอิงไฟล์ภายในระบบ (generate โดยระบบ)"
+        string(50) BlobPath "This path directory file in blob"
+        string(50) Container "This is container blob of file"
     }
 ```

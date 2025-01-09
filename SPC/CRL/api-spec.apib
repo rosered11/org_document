@@ -26,14 +26,15 @@ HOST: http://crlservice
 - Update info and status of process file to `FileManagement Service`
 
 ### Status in ImportFileLog
-| **Status** | **Description**
-|------------|-----------------
-| New | Initial status of log.
-| In-progress | This task is processing for import data.
-| Completed | This task import data is completed.
-| In-completed | This task import data has a problem.
-| Failed | Internal Exception for process import data.
-| Unknown.. | Unknown status for sync to FC
+| **Status** | **StatusText** | **Description**
+|------------|------------|-----------------
+| 1 | New | Initial status of log.
+| 2 | In-progress | This task is processing for import data.
+| 3 | Completed | This task import data is completed.
+| 4 | In-completed | This task import data has a problem.
+| 5 | Failed | Internal Exception for process import data.
+| 6 | ReadyToSendToFC | Sync data to FC is completed.
+| 7 | FailToSendToFC | Sync data to FC is incompleted.
 
 ### Type in BlobStorage
 | **Type** | **Path** | **Description**
@@ -43,9 +44,9 @@ HOST: http://crlservice
 
 ## Group Product Api
 
-### Trigger process product master [/product/master/fileprocess]
+### Trigger process product master [/product/api/product/importFileMaster]
 
-#### Trigger product master [PUT]
+#### Trigger product master [POST]
 
 **Validation Criteria**
 - [x] Check `fileId` isn't empty.
@@ -65,7 +66,7 @@ HOST: http://crlservice
             "fileId": "w143kxnu.idj"
         }
 
-+ Response 201
++ Response 204
 
 + Response 500 (application/json)
     + Attributes (InternalError Base)
@@ -73,7 +74,7 @@ HOST: http://crlservice
 ## Group FileManagement Api
 This section group filemanagement service
 
-### Download [/filemanagement/blobStorage/{fileId}?fileName={fileName}]
+### Download [/filemanagement/api/blobStorage/fileId/{fileId}?fileName={fileName}]
 
 #### Download file from blob [GET]
 Use this endpoint for download file from blob storage.
@@ -112,7 +113,7 @@ Read container from config.
 + Response 500 (application/json)
     + Attributes (InternalError Base)
 
-### Download [/filemanagement/api/blobStorage/{fileId}/decompress?fileName={fileName}]
+### Download [/filemanagement/api/blobStorage/fileId/{fileId}/decompress?fileName={fileName}]
 
 #### Download file by fileId with decompress [GET]
 
@@ -144,7 +145,7 @@ Read container from config.
 + Response 500 (application/json)
     + Attributes (InternalError Base)
 
-### Import file for processing [/filemanagement/api/blobStorage/bu/{bu}/type/{type}]
+### Import file for processing [/filemanagement/api/importFileLog/bu/{bu}/type/{type}]
 
 #### Import file for process [POST]
 Use this endpoint to upload file into blob storage.
@@ -260,7 +261,7 @@ Use this endpoint to upload file into blob storage.
 
         {
             "fileId": "",
-            "status": "",
+            "status": 1,
             "remark": "",
             "sourceBatch": "",
             "allRecordCount": "",
@@ -278,16 +279,28 @@ Use this endpoint to upload file into blob storage.
 # Data Structures
 
 ## BadRequest Base (object)
-+ message: Invalid content type (string)
++ statusCode: 400 (string)
+
+    HttpStatusCode
+
++ statusDesc: Invalid content type (string)
 
     A message validate.
 
 ## NotFound Base (object)
-+ message: File not found (string)
++ statusCode: 404 (string)
+
+    HttpStatusCode
+
++ statusDesc: File not found (string)
 
     A data is missing in system.
 
 ## InternalError Base (object)
-+ message: Null Referenece Exception (string)
++ statusCode: 500 (string)
+
+    HttpStatusCode
+
++ statusDesc: Null Referenece Exception (string)
 
     A exception message.
