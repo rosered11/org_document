@@ -13,7 +13,7 @@ erDiagram
         string(50) Status "สถานะของการ upload file ex: [New, In-progress, Completed, In-completed, Failed]"
         string(255) SourceFileUrl "Url ของ source file ที่ upload เข้ามา"
         string(255) ReportFileUrl "Url ของ report สำหรับแสดงสถานะการ upload"
-        string(100) Remark "ในกรณีที่ทำงานไม่สมบูรณ์ เช่น Exception แปะ message Exception ไว้ที่นี้ได้"
+        text Remark "ในกรณีที่ทำงานไม่สมบูรณ์ เช่น Exception แปะ message Exception ไว้ที่นี้ได้"
         string(100) Type "ได้รับจาก request"
         string(100) SourceBatch "The source batch ได้รับจาก Product service"
         string(100) Bu "ได้รับจาก request"

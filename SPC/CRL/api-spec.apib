@@ -1,5 +1,5 @@
 FORMAT: 1A
-HOST: http://crlservice
+HOST: https://cgfms-dev.central.co.th/service-gateway
 
 # CRL API
 
@@ -33,8 +33,8 @@ HOST: http://crlservice
 | 3 | Completed | This task import data is completed.
 | 4 | In-completed | This task import data has a problem.
 | 5 | Failed | Internal Exception for process import data.
-| 6 | ReadyToSendToFC | Sync data to FC is completed.
-| 7 | FailToSendToFC | Sync data to FC is incompleted.
+| 6 | ReadyToSendToWMS | Sync data to WMS is completed.
+| 7 | FailToSendToWMS | Sync data to WMS is incompleted.
 
 ### Type in BlobStorage
 | **Type** | **Path** | **Description**
@@ -44,7 +44,7 @@ HOST: http://crlservice
 
 ## Group Product Api
 
-### Trigger process product master [/product/api/product/importFileMaster]
+### Trigger process product master [/product-service/api/product/importFileMaster]
 
 #### Trigger product master [POST]
 
@@ -74,7 +74,7 @@ HOST: http://crlservice
 ## Group FileManagement Api
 This section group filemanagement service
 
-### Download [/filemanagement/api/blobStorage/fileId/{fileId}?fileName={fileName}]
+### Download [/file-manage-service/api/blobStorage/fileId/{fileId}?fileName={fileName}]
 
 #### Download file from blob [GET]
 Use this endpoint for download file from blob storage.
@@ -113,7 +113,7 @@ Read container from config.
 + Response 500 (application/json)
     + Attributes (InternalError Base)
 
-### Download [/filemanagement/api/blobStorage/fileId/{fileId}/decompress?fileName={fileName}]
+### Download [/file-manage-service/api/blobStorage/fileId/{fileId}/decompress?fileName={fileName}]
 
 #### Download file by fileId with decompress [GET]
 
@@ -145,7 +145,7 @@ Read container from config.
 + Response 500 (application/json)
     + Attributes (InternalError Base)
 
-### Import file for processing [/filemanagement/api/importFileLog/bu/{bu}/type/{type}]
+### Import file for processing [/file-manage-service/api/importFileLog/bu/{bu}/type/{type}]
 
 #### Import file for process [POST]
 Use this endpoint to upload file into blob storage.
@@ -194,7 +194,7 @@ Use this endpoint to upload file into blob storage.
 + Response 500 (application/json)
     + Attributes (InternalError Base)
 
-### Upload file [/filemanagement/api/blobStorage/type/{type}]
+### Upload file [/file-manage-service/api/blobStorage/type/{type}]
 
 #### Upload file [POST]
 Use this endpoint to upload file into blob storage.
@@ -222,7 +222,6 @@ Use this endpoint to upload file into blob storage.
     + Headers
 
         Authorization: Bearer {access-token}
-        X-Custom-Extension: csv
         X-Custom-FileName: fileName.csv.gz
     
     + Body
@@ -241,7 +240,7 @@ Use this endpoint to upload file into blob storage.
 + Response 500 (application/json)
     + Attributes (InternalError Base)
 
-### Update info of import file [/filemanagement/api/importFileLog/updateImportFileLog]
+### Update info of import file [/file-manage-service/api/importFileLog/updateImportFileLog]
 
 #### Update info of file [PATCH]
 
