@@ -3,6 +3,7 @@ sequenceDiagram
     participant Product
     participant FileManagement
     participant Blob Storage
+    participant Service (Team Data)
     FileManagement->>Product: call API trigger(fileId)
     par Background process
         Product->>FileManagement: file = getFile(req.fileId)
@@ -40,6 +41,7 @@ sequenceDiagram
             Product->>Product: db.commit()
         end
         Product->>FileManagement: call API updateStatus(fileId, reportUrl, status, sourceBatchId, allRecords, failureRecords, remark?)
+        Product->>Service (Team Data): trigger url team data
     end
     Product-->>FileManagement: response
 ```
