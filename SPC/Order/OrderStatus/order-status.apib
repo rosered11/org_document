@@ -1,0 +1,72 @@
+FORMAT: 1A
+HOST: https://cgfms-dev.central.co.th/service-gateway
+
+# Order Status
+
+### Logic Order Status
+- case 1 order
+    
+    |         | **OMS**                ||
+    |---------|--------------|----------|
+    | **Order** | **SubOrder** | **Item** |
+    | New | New ||
+    | In Process | In Process ||
+    | Picked | Picked | Picked |
+
+## Group Product Api
+
+### Trigger process product master [/product-service/api/product/importFileMaster]
+
+#### Trigger product master [POST]
+
+**Validation Criteria**
+- [x] Check `fileId` isn't empty.
+
+**Process Instruction**
+- Create background thread for execute [Function Process File](#header-function-process-product-master)
+
++ Request (application/json)
+
+    + Headers
+
+        Authorization: Bearer {access-token}
+    
+    + Body
+
+        {
+            "fileId": "w143kxnu.idj"
+        }
+
++ Response 204
+
++ Response 500 (application/json)
+    + Attributes (InternalError Base)
+
+# Data Structures
+
+## BadRequest Base (object)
++ statusCode: 400 (string)
+
+    HttpStatusCode
+
++ statusDesc: Invalid content type (string)
+
+    A message validate.
+
+## NotFound Base (object)
++ statusCode: 404 (string)
+
+    HttpStatusCode
+
++ statusDesc: File not found (string)
+
+    A data is missing in system.
+
+## InternalError Base (object)
++ statusCode: 500 (string)
+
+    HttpStatusCode
+
++ statusDesc: Null Referenece Exception (string)
+
+    A exception message.
