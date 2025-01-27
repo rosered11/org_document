@@ -3,15 +3,30 @@ HOST: https://cgfms-dev.central.co.th/service-gateway
 
 # Order Status
 
-### Logic Order Status
-- case 1 order
-    
-    |         | **OMS**                ||
-    |---------|--------------|----------|
-    | **Order** | **SubOrder** | **Item** |
-    | New | New ||
-    | In Process | In Process ||
-    | Picked | Picked | Picked |
+**EventName:** *OrderStatusUpdated*
+
+### Saga Status
+| **Status** | **Remark** |
+|------------|------------|
+| STARTED | Initial saga transaction |
+| PROCESSING | processing logic |
+| SUCCEEDED | process is success |
+| COMPENSATED | process isn't success |
+
+### Domain status
+| **Status** | **Remark** |
+|------------|------------|
+| PROCESSING | after process update order status is completed |
+| COMPLETED | compute status aggregate completed |
+| INCOMPLETED | status target out of spec (May not be used.) |
+| FAILED | process exception |
+
+### Outbox status
+| **Status** | **Remark** |
+|------------|------------|
+| STARTED | Initial outbox |
+| COMPLETED | Send event to broker is completed |
+| FAILED | Send event failed |
 
 ## Group Product Api
 
