@@ -1,6 +1,6 @@
 ```mermaid
 erDiagram
-    OrderSagaTb {
+    OrderSagaDb {
         long Id PK "Db auto generate"
         DateTime Timestamp "This is time to create record."
         string(100) SagaId "This is identifier of transaction on saga pattern"
@@ -9,13 +9,16 @@ erDiagram
         string(100) SourceOrderId "This is source order id use tracking order in system"
         string(100) FailureMessage "[NULL] This is message fail or exception"
     }
-    OrderOutboxTb {
+    OrderOutboxDb {
         long Id PK "Db auto generate"
         DateTime Timestamp "This is time to create record."
         DateTime ProcessDate "[NULL] This time when publish message to broker"
         string(100) EventType "This is identifier of event in Order"
         string(100) OutboxStatus "This is status of outbox. (Ex. view in API Spec)"
         string(max) Payload "This is payload of event. (Ex. view in API Spec)"
+    }
+    OrderDb_Extension {
+        string StatusAggregate "This is status summanry from subOrders relations"
     }
     SysStatusAggregate {
         
