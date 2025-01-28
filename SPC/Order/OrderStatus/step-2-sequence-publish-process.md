@@ -4,7 +4,7 @@ sequenceDiagram
     participant Order
     participant MessageQueueBroker
     Cronjob(Non-Concurrent)->>Order: Call API trigger to publish event payload to broker
-    alt Check records from outbox table status = "STARTED"
+    alt Check records from outbox table status in ["STARTED", "FAILED"]
         Order->Order: eventFromOutbox = db.Outbox.query(status == "STARTED").orderBy(createdate).limit(10)
         loop event in eventFromOutbox
             critical Establish a connection to message broker
@@ -17,6 +17,7 @@ sequenceDiagram
                 end
             option Exception
                 Order->Order: db.Outbox.Update(event, outboxStatus: "FAILED")
+                Order->Order: logger.LogError(exception)
             end
         end
     end

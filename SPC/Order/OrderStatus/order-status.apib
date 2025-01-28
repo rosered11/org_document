@@ -3,7 +3,19 @@ HOST: https://cgfms-dev.central.co.th/service-gateway
 
 # Order Status
 
-**EventName:** *OrderStatusUpdated*
+## Event
+### Event: OrderStatusUpdated
+
+**Description:** This event will be send after call api update order status.
+
+**Payload**:
+```json
+{
+    "orderId": "mock order id"
+}
+```
+
+## All Status
 
 ### Saga Status
 | **Status** | **Remark** |
@@ -13,14 +25,6 @@ HOST: https://cgfms-dev.central.co.th/service-gateway
 | SUCCEEDED | process is success |
 | COMPENSATED | process isn't success |
 
-### Domain status
-| **Status** | **Remark** |
-|------------|------------|
-| PROCESSING | after process update order status is completed |
-| COMPLETED | compute status aggregate completed |
-| INCOMPLETED | status target out of spec (May not be used.) |
-| FAILED | process exception |
-
 ### Outbox status
 | **Status** | **Remark** |
 |------------|------------|
@@ -28,7 +32,7 @@ HOST: https://cgfms-dev.central.co.th/service-gateway
 | COMPLETED | Send event to broker is completed |
 | FAILED | Send event failed |
 
-## Group Product Api
+## Group Outbox Api
 
 ### Trigger process product master [/product-service/api/product/importFileMaster]
 
