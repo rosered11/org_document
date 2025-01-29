@@ -8,7 +8,6 @@ sequenceDiagram
             Order->Order: order = db.Order.query(x => x.SourceOrderId == event.OrderId)
             Order->Order: subOrders = db.SubOrder.query(x => x.SourceOrderId == event.OrderId)
             Order->Order: orderStatusAggregate = GetAggregateStatusOrder(order, subOrders)
-            Order->Order: isAvailable = db.SysAggregateStatus.any(x => Status == orderStatusAggregate)
             Order->Order: db.Order.UpdateStatusAggregate(orderStatusAggregate)
                 Order->Order: db.OrderSaga.Update(event.SagaId, sagaStatus: "SUCCEEDED")
         option Exception
