@@ -3,10 +3,11 @@ HOST: https://cgfms-dev.central.co.th/service-gateway
 
 # Order Status
 
-## Event
-### Event: OrderStatusUpdated
+## Event: OrderStatusUpdated
 
-**Description:** This event will be send after call api update order status.
+**Description:** This event will be send after call api update order status
+
+Endpoint Path: */order-service/api/event/v2/orderItemStatusUpdate*
 
 **Payload**:
 ```json
@@ -15,9 +16,7 @@ HOST: https://cgfms-dev.central.co.th/service-gateway
 }
 ```
 
-## All Status
-
-### Saga Status
+## Saga Status
 | **Status** | **Remark** |
 |------------|------------|
 | STARTED | Initial saga transaction |
@@ -25,12 +24,20 @@ HOST: https://cgfms-dev.central.co.th/service-gateway
 | SUCCEEDED | process is success |
 | COMPENSATED | process isn't success |
 
-### Outbox status
+## Outbox status
 | **Status** | **Remark** |
 |------------|------------|
 | STARTED | Initial outbox |
 | COMPLETED | Send event to broker is completed |
 | FAILED | Send event failed |
+
+## Aggregate Order Status Configulation
+
+**Table:** *SysStatusAggregate*
+
+**Description:** This table use for get status display to Frontend per channel
+
+**Remark:** The configuration this table. it should have default status display. In case don't have set up channel in this table.
 
 ## Group Outbox Api
 
@@ -55,24 +62,6 @@ HOST: https://cgfms-dev.central.co.th/service-gateway
     + Attributes (InternalError Base)
 
 # Data Structures
-
-## BadRequest Base (object)
-+ statusCode: 400 (string)
-
-    HttpStatusCode
-
-+ statusDesc: Invalid content type (string)
-
-    A message validate.
-
-## NotFound Base (object)
-+ statusCode: 404 (string)
-
-    HttpStatusCode
-
-+ statusDesc: File not found (string)
-
-    A data is missing in system.
 
 ## InternalError Base (object)
 + statusCode: 500 (string)

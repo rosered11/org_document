@@ -4,7 +4,7 @@ erDiagram
         long Id PK "Db auto generate"
         DateTime Timestamp "This is time to create record."
         string(50) SagaId "This is identifier of transaction on saga pattern"
-        string(100) SagaStatus "This is status of saga. (Ex. view in API Spec)"
+        string(50) SagaStatus "This is status of saga. (Ex. view in API Spec)"
         string(50) SourceOrderId "This is source order id use tracking order in system"
         string(max) FailureMessage "[NULL] This is message fail or exception"
     }
@@ -17,7 +17,7 @@ erDiagram
         string(max) Payload "This is payload of event. (Ex. view in API Spec)"
     }
     OrderDb_Extension {
-        string StatusAggregate "This is core status summanry from subOrders relations"
+        string(50) StatusAggregate "This is core status summanry from subOrders relations"
     }
     SysStatusAggregate {
         long ID PK "Db auto generate"
@@ -27,6 +27,6 @@ erDiagram
         string(100) UpdatedBy "[NULL] This is username for updated"
         string(50) StatusAggregate "This is core status summanry from subOrders relations"
         string(50) StatusDisplay "This is status display"
-        string(50) Channel "This is channel for display status"
+        string(50) Channel "[NULL] This is channel for display status"
     }
 ```
