@@ -11,7 +11,7 @@ HOST: https://cgfms-dev.central.co.th/service-gateway
 **Payload**:
 ```json
 {
-    "orderId": "mock order id"
+    "sourceOrderId": "{source_order_id}"
 }
 ```
 
@@ -34,27 +34,20 @@ HOST: https://cgfms-dev.central.co.th/service-gateway
 
 ## Group Outbox Api
 
-### Trigger process product master [/product-service/api/product/importFileMaster]
+### Trigger publish event payload [/order-service/api/outbox/publish]
 
-#### Trigger product master [POST]
-
-**Validation Criteria**
-- [x] Check `fileId` isn't empty.
+#### Trigger publish event [GET]
 
 **Process Instruction**
-- Create background thread for execute [Function Process File](#header-function-process-product-master)
+- Query outbox from database
+- If have data, publish event payload to Message Broker
+- Update saga status follow result from publish message
 
 + Request (application/json)
 
     + Headers
 
         Authorization: Bearer {access-token}
-    
-    + Body
-
-        {
-            "fileId": "w143kxnu.idj"
-        }
 
 + Response 204
 
