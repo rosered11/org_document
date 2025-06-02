@@ -23,23 +23,132 @@ class CronFull,CronAdjust client
 
 ### Solutions
 
+**Longterm**
 ```mermaid
 graph LR
-StockSvc(Stock Service) --> ControllerMain(API Service Main)
-ControllerMain -- 1.re-init data to main stock --> StockMainDb(Table: Stock Main)
-ControllerMain -- 2.create/publish event for product update --> Kafka(Kafka)
-StockSvc(Stock Service) --> ControllerAdjust(API Service Adjust)
-ControllerAdjust -- 1.adjust data to adjust stock --> StockAdjustDb(Table: Stock Adjustment)
-ControllerAdjust -- 2.build event in adjust stock to adjust data in Stock Main --> StockMainDb
-ControllerAdjust -- 3.create/publish event for product update --> Kafka
 
-CronFull(Cronjob full<br>trigger 04:00) -- call api service main--> StockSvc
-CronAdjust(Cronjob Adjust<br>trigger 05:00 - 23:00) -- call api service adjust --> StockSvc
-Kafka -- consume --> Worker(Work consume Snapshot)
-Worker -- adjust data --> DatabaseSnap(Database Warehouse Snapshot)
+subgraph WMS
+StockWMSDb(Table: Stock Adjust/Full)
+end
+
+subgraph SPC
+StockMainSPCDb(Table: Stock Main)
+StockAdjustSPCDb(Table: Stock Adjustment)
+StockSvc(Stock Tracking)
+gRPCMain(gRPC Service Main)
+gRPCAdjust(gRPC Service Adjust)
+CronFull(Cronjob full<br>trigger 04:00)
+ProcessFullAdjust(Process<br>Full/Adjust)
+ProcessAdjust(ProcessCore<br>Adjust)
+CronAdjust(Cronjob Adjust<br>trigger 05:00 - 23:00<br>every 15 mins)
+Worker(Worker consume Snapshot)
+end
+
+Kafka(Kafka)
+DatabaseSnap(Database Warehouse Snapshot)
+
+StockWMSDb --> CronFull
+StockWMSDb --> CronAdjust
+StockSvc --> gRPCMain
+gRPCMain --> ProcessFullAdjust
+ProcessFullAdjust --> StockAdjustSPCDb
+ProcessFullAdjust --> StockMainSPCDb
+ProcessFullAdjust --> Kafka
+StockSvc --> gRPCAdjust
+gRPCAdjust --> ProcessFullAdjust
+
+
+CronFull -- call grpc service main--> StockSvc
+CronAdjust -- call grpc service adjust --> StockSvc
+Kafka -- consume --> Worker
+Worker -- adjust data --> DatabaseSnap
 ```
 
-**Detail**
+**Shortterm**
+```mermaid
+graph LR
+
+subgraph WMS
+StockWMSDb(Table: Stock Adjust/Full)
+end
+
+subgraph SPC
+StockMainSPCDb(Table: Stock Main)
+StockAdjustSPCDb(Table: Stock Adjustment)
+end
+
+CronFull(Cronjob full<br>trigger 04:00)
+ProcessCore(Process<br>Full/Adjust)
+Kafka(Kafka)
+CronAdjust(Cronjob Adjust<br>trigger 05:00 - 23:00<br>every 15 mins)
+Worker(Worker consume Snapshot)
+DatabaseSnap(Database Warehouse Snapshot)
+
+StockWMSDb --> CronFull
+CronFull --> ProcessCore
+ProcessCore --> StockMainSPCDb
+ProcessCore --> Kafka
+
+StockWMSDb --> CronAdjust
+CronAdjust --> ProcessCore
+ProcessCore --> StockAdjustSPCDb
+
+Kafka -- consume --> Worker
+Worker -- adjust data --> DatabaseSnap
+```
+
+**Step process both Full/Adjust:**
+
+1. query snapshot table from *WMS(Adjust/Full)* sync to *stockadjustment(SPC)*
+2. build data in *stockadjustment(SPC)* are new records to adjust data in *stock(SPC)*
+3. create event for stockadjustment and send to Kafka
+4. create event for stock and send to Kafka
+
+**Plan:**
+
+- เนื่องจากในส่วนของ datasource ทางฝั่ง FC ในอนาคตอาจจะมี การเพิ่ม BU เพิ่มขึ้นเรื่อยๆ อาจจะต้อง fucus การ scale ที่ฝั่งเราด้วย โดยเฉพาะ table snapshot ที่ในอนาคต เราต้องการกดดู history ของมันได้ เราก็ต้องทำการ snap เหมือนกัน
+- ระบบต้องมี notify ตาม limit ที่ setting ถ้า product ถึง limit ต้องมีการ notify ออกมา
+- ต้องมี Team notify สำหรับ fail case
+- แยก cronjob สำหรับ purge data แยกมาอีกตัวนึงสำหรับเคลีย data เก่า
+- อยากปรับ logic การดึงข้อมูลจาก track ด้วย SyncStock_seq เป็น track ด้วย ID เนื่องจากมัน track ได้ระดับ record เพราะว่า syncstock_seq มันซ้ำกันได้ทำให้ยากต่อการ track ว่า syncstock_seq นี้เข้ามาครบไหม
+- อยากมี table เก็บ last_stock running in database แทน query max SyncSequence
+
+**Confirm and Question**
+
+- จำเป็นต้องลบ data ทั้งหมดใน stock ออกหมด ก่อน sync ไหม อยากจะปรับ เป็น update กับ insert พอ => ไม่ได้ต้องลบหมด
+- table stockadjustment ใช่ table ที่ใช้สำหรับการ view movement ของ product ทั้งหมด ใช่ไหม? => ใช่
+- table stock ใช้ในการ view ในหน้าจอของ FE สำหรับการดู qty ล่าสุด รวมถึง available กับ reserved => ใช่
+- key ของ stock ที่เราทำการ adjustment ระหว่าง *stockadjustment* กับ *stock* คือ ('product_id', 'warehouse_id', 'location_id' , 'owner_id') ใช่ไหม => ใช่
+
+- อยากได้ ตำแหน่งของ resource ที่ใช้ในการ calculate ค่า Available Qty กับ Reserved Qty เช่น database ตัวไหน, table อะไร และ field ไหน (ติดไว้ก่อน ไว้กลับมาคุยกับพี่แจส)
+- stockadjustment จาก WMS เราต้องจัดการกับข้อมูลซ้ำกันยังไง ในกรณีถ้า data duplicate ข้อมูลตาม fields key เหล่านี้ ('Product_ID','location_ID','Warehouse_ID','syncstock_seq','Owner_ID'] เช่น
+
+**Case 1 ซ้ำในกรณี ข้อมูล keys และ qty เหมือนกันหมดเลย**
+| Product_ID | LocationGroup | Warehouse_ID | syncstock_seq | Owner_ID | Movement_QtyBal |
+| :- | :- | :- | :- | :- | -: |
+| productId1 | 1060 | 1005 | 45858 | CMG | -1 |
+| productId1 | 1060 | 1005 | 45858 | CMG | -1 |
+
+นอกเหนือจาก ID และ Create_Date ถ้า fields อื่นๆ ที่เราสนใจข้อมูลซ้ำ ถือว่าข้อมูลนั้นซ้ำ แล้วก็เอาเข้าแค่ตัวแรกตัวเดียว
+
+**Case 2 ซ้ำในกรณี ข้อมูล keys เหมือนกัน แต่ qty ต่างกัน**
+| Product_ID | LocationGroup | Warehouse_ID | syncstock_seq | Owner_ID | Movement_QtyBal |
+| :- | :- | :- | :- | :- | -: |
+| productId1 | 1060 | 1005 | 45858 | CMG | -1 |
+| productId1 | 1060 | 1005 | 45858 | CMG | 2 |
+
+ุถ้าเป็น case นี้ถือว่า เป็น 2 records แล้วทำงานปกติ
+
+**Case 3 ซ้ำในกรณี ข้อมูล keys และ qty เหมือนกันหมดเลย แต่เป็น จังหวะ Stock Full Sync**
+| Product_ID | LocationGroup | Warehouse_ID | syncstock_seq | Owner_ID | Binbalance_QtyBal |
+| :- | :- | :- | :- | :- | -: |
+| productId1 | 1060 | 1005 | 45858 | CMG | 2 |
+| productId1 | 1060 | 1005 | 45858 | CMG | 2 |
+
+ถ้าเกิดเจอเคสนี้ เอาเข้าแค่ตัวแรกตัวเดียว
+
+
+### Intro
 - Cronjob Full: ทำหน้าที่ในการ re-initial data ใหม่ มาแทนที่ โดยจะทำงานช่วงเวลา 04:00 ของทุกวัน เนื่องจากทางฝั่ง FC เขาจะมีการ re-adjust เพื่อให้ data up to date ซึงฝั่ง FC เขาจะ re-cale data ในแต่ละวัน เสร็จก่อนตี 4 เสมอ
 - Cronjob Adjust: ทำหน้าที่ในการ ดึงข้อมูล adjust จาก table adjust ของ FC มา update ที่ฝั่ง SPC และ re-build adjust data to Stock Main ของ SPC โดยเงื่อนไขการทำงานหลักๆ มีดังนี้
     
@@ -49,6 +158,86 @@ Worker -- adjust data --> DatabaseSnap(Database Warehouse Snapshot)
         - event ที่ได้รับ ถ้ามีการส่ง qty มาแต่ สถานะ เป็นค่าติดลบ และเมื่อมีการหักลบออกจาก Product ใน stock main แล้วได้ค่าติดลบ จะ Ignore event นั้น
         - event ที่ได้รับ มีการส่ง qty มา และสถานะเป็นค่าบวก แต่ไม่มี product ใน stock main ให้ทำการสร้าง record ใหม่ใน stock main ได้เลย (หมายเหตุ ข้อมูลใน event ต้องเพียงพอต่อการสร้าง order)
         - event ที่ได้รับนอกเหนือจากนั้น ให้ +/- qty ปกติ
+
+**Implement**
+
+- ทำ cronjob sync main ใหม่ โดย function มีดังนี้
+    - ทำ function ต่อ gRPC ไปที่ gRPC Stock Main
+    - ทำ function mapping request gRPC to Stock Main
+- ทำ cronjob sync adjust ใหม่
+    - ทำ function ต่อ gRPC ไปที่ gRPC Stock Adjust
+    - ทำ function mapping request gRPC to Stock Adjust
+- initial gRPC protocal บน web service (Stock Service)
+- ทำ function ที่รับ request จาก gRPC Main โดย function ที่ทำมีดังนี้
+    - ทำ controller รับ gRPC สำหรับขา Stock Main
+    - ทำ function sync data จาก Stock Adjust Main FC sync to Stock Adjust SPC
+    - ทำ function calulate data จาก Stock Adjust SPC ที่เข้ามาใหม่ เพื่อ adjust data บน Stock Main SPC
+    - เรียกใช้ function core สำหรับ build event sync Stock Adjust SPC
+    - เรียกใช้ function core สำหรับ build event sync Stock SPC
+    - ทำ notify กรณี case fail
+- ทำ function ที่รับ request จาก gRPC Adjust โดย function ที่ทำมีดังนี้
+    - ทำ controller รับ gRPC สำหรับขา Stock Adjust
+    - ทำ function sync data จาก Stock Adjust FC sync to Stock Adjust SPC
+    - ทำ function calulate data จาก Stock Adjust SPC ที่เข้ามาใหม่ เพื่อ adjust data บน Stock Main SPC
+    - เรียกใช้ function core สำหรับ build event sync Stock Adjust SPC
+    - เรียกใช้ function core สำหรับ build event sync Stock Main SPC
+    - ทำ notify กรณี case fail
+- ทำ function core สำหรับ build event sync Stock (Main/Adjust) SPC และ produce message ไปที่ Kafka
+- ทำ worker สำหรับ consume message event โดย function การทำงานมีดังนี้
+    - ทำ function consume message จาก kafka
+    - ทำ function รับ event แล้ว sync data มาเก็บไว้ที่ database warehouse
+    - ทำ notify กรณี case fail
+- Implement API for fetch data from database warehouse
+    - Initial project for WebAPI (Authen, Log, Layout UnitTest)
+    - ทำ function สำหรับ provide data ให้ FE
+    - Database migration
+- ทำ Sequence diagram สำหรับ function process
+    - cronjob adjust
+    - cronjob full
+    - consume worker
+    - API service for FE (ยังไม่ทำ รอคุยหน้าจอกับ FE ก่อน)
+- ทำ ER-diagram สำหรับ database warehouse
+- ทำ API Spec for FE
+- Initial project ETL Net Cronjob(Inital project in new repro)
+- Migrate Data สำหรับการย้าย field + เพิ่ม field ใหม่
+- Design รูปแบบ event สำหรับ sync data ไปให้ consumer ไป adjust(CRUD) data
+
+
+### Problem Prod
+- Stock Full Sync ส่งเบิ้ล need handle
+
+### Need TODO
+- ทำเรื่องขอขึ้น service ใหม่
+- ทำเรื่องขอ kafka สำหรับใช้ sync ข้อมูล ไป database warehouse
+- อธิบายการขึ้น cronjob ที่จะไป กับสอบถามการวาง service cronjob เก่าจากทีม
+- สอบถาม อาหลง ว่าการปรับ field และ migrate data พี่ผลกระทบกับส่วนอื่นหรือป่าว เช่น service ที่ดึง data ไปทำ report
+- type ของ field เก่า ที่ไม่ตรงกับ Source
+    - SyncStockSeq
+    - BinbalanceQtyBal
+    - location_ID
+- สอบถาม อาหลง ว่าปัจจุบันเราเคลีย stockadjustment ของ SPC ยังไง เพราะอาจจะต้องคิดเผื่อตอน ส่งไปเคลียที่ฝั่ง consumer ด้วย
+
+
+### Database
+
+SPRINT_SNAP_WMS_CMG -> table: Onwms_Snap_Adjust_Stock
+SPRINT_SNAP_WMS_CMG -> table: Onwms_Snap_Stock
+
+
+
+### Question
+- กรณีที่มี case เกิดประมาณนี้ เราจะ handle reserve qty กับ available qty ยังไง
+init qty = 1
+            adjust +, qty = 2
+            adjust -, qty = -1 sum: => 4
+
+            full, qty = 6 
+                missing snap step: 
+                    adjust -, qty = -1
+                    adjust +, qty = 3
+
+Note: - Reserve Qty: คือ adjust type summary qty flag -
+    - Available Qty: คือ current qty - Reserve Qty
 
 ### Background
 ```mermaid
@@ -72,73 +261,5 @@ end
 - Outbound: สินค้าที่ถูกขายออก คือสินค้าที่ถูกขายออกไป เมื่อถูกขายจะนำออกจาก stock สินค้า
 - Stock Main: เป็น core management stock สินค้า ว่ามีเพิ่มเข้ามา หรือลดลง
 - Cronjob: เป็น cronjob ที่ทำหน้าที่ในการ sync data ระหว่าง FC กับ SPC
-
-## Event Sourcing
-
-### Event Store
-```mermaid
-graph LR
-    Cronjob(Cronjob<br>Starter) <-- trigger every 04:00 --> FCSnapFull(Snap Full Sync)
-    Cronjob <-- unknow --> FCSnapAdjust(Snap Adjust Sync)
-    Cronjob --> SPCAdjust(Adjustment Stock)
-    SPCAdjust --> SPCStock(Stock Main) 
-```
-
-### Cronjob
-```mermaid
-graph LR
-    Cron(Cronjob) -- 1.build event to snapshot --> Order
-    Order(Order Service) -- 2.query event isn't sync --> Event(Event Store)
-    Event -- 3.receive and build adjust snapshot --> Order
-```
-
-### View
-```mermaid
-graph LR
-
-    Client(Client) -- 1.query order --> Order(Order Query Service)
-    Order -- 2.return data view from snapshot --> Client
-```
-
-### Intro
-
-- เราจะต้อง list ทางเข้าทั้งหมดที่ทำให้เกิดการเปลี่ยนแปลงข้อมูล
-- เราต้อง design event ให้ cover ในจุดต่างๆ ที่เราสนใจ
-- เราต้องทำ function สร้าง event ในจุดเหล่านั้น
-- เราจะทำ api สำหรับ ดึงข้อมูลจาก table snapshot
-- เราจะทำ api สำหรับ ดึงข้อมูล history ด้วย identity จาก table event
-
-### API Recommend
-
-- /fetch/fullhistory/{order-id} -- query from event, snapshot and order-detail
-- /fetch/order-list (need-filter-by-default) -- query from snapshot
-
-### Component
-
-- **Event Store:** ที่เก็บ event สำหรับการทำ snapshot ของ inventory
-
-```mermaid
-erDiagram
-    InventoryEvent {
-        long Id PK
-        string(50) AggregateId "Identity สำหรับอ้างอิงกับ transaction เช่น Order-1234, Product-1234"
-        string(50) AggregateType "Domain object หรือประเภทของข้อมูล เช่น Order, Product"
-        string(50) EventType "Event ที่เกิดขึ้น เช่น ProductCreated, OrderCreated"
-        string(max) EventPayload "Data payload ของ event"
-        boolean IsSnapshotSynced "flag สำหรับบอกว่าทำการ sync ข้อมูลหรือยัง"
-        dateTime2 CreatedAt "เวลาที่สร้าง"
-    }
-```
-- **Inventory Product:** ใช้ในการเก็บ current data ของ product (snapshot) โดย data ใน table นี้ต้องเกิดจากการ build event ใน event store เท่านั้น
-```mermaid
-erDiagram
-    InventoryProduct {
-        long Id PK
-        string(50) ProductId "Identity ของ product เช่น Product-1234"
-        string(50) ProductName "ชื่อ product"
-        int Quantity "จำนวนสินค้า"
-        boolean IsDeleted "ใช้ flag สำหรับ product ที่ไม่ต้องการแล้ว จะถูกใช้กรณีมี case Event: ProductDeleted"
-        string(max) EventPayload "Data payload ของ event"
-        dateTime2 UpdatedAt "เวลาที่ update"
-    }
-```
+- Reserve Qty: คือ adjust type summary qty flag -
+- Available Qty: คือ current qty - Reserve Qty
